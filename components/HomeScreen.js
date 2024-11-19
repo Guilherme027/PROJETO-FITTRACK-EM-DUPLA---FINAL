@@ -1,26 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const HomeScreen = ({ navigation }) => {
   const [userName, setUserName] = useState('');
   const [totalWorkouts, setTotalWorkouts] = useState(0);
-  const [recentWorkouts, setRecentWorkouts] = useState([]); // Armazenar os treinos recentes
+  const [recentWorkouts, setRecentWorkouts] = useState([]);
+  const [meals, setMeals] = useState([]); // Armazenar as refeições
 
+  // Função para carregar os dados do usuário, treinos e refeições
   const loadUserData = async () => {
     try {
       const name = await AsyncStorage.getItem('userName');
       const storedWorkouts = await AsyncStorage.getItem('workoutTotal');
       const workouts = storedWorkouts ? parseInt(storedWorkouts, 10) : 0;
       const recent = await AsyncStorage.getItem('recentWorkouts');
-      const workoutsList = recent ? JSON.parse(recent) : []; // Carregar treinos recentes
+      const workoutsList = recent ? JSON.parse(recent) : [];
 
       if (name) {
         setUserName(name);
       }
       setTotalWorkouts(workouts);
       setRecentWorkouts(workoutsList);
+
+      // Carregar as refeições armazenadas ou adicionar refeições predefinidas
+      const storedMeals = await AsyncStorage.getItem('dietData');
+      const mealsList = storedMeals ? JSON.parse(storedMeals) : [
+        { name: 'Almoço', calories: 600 }, 
+        { name: 'Jantar', calories: 500 },
+        { name: 'Café da manhã', calories: 300 }
+      ];
+      setMeals(mealsList);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
@@ -62,25 +73,25 @@ const HomeScreen = ({ navigation }) => {
           Total de Treinos: <Text style={styles.metricValue}>{totalWorkouts}</Text>
         </Text>
         <Text style={styles.metricItem}>
-          Progresso Diário: <Text style={styles.metricValue}>500 Calorias Queimadas</Text>
+          Refeição Diária: <Text style={styles.metricValue}>500 Calorias Queimadas</Text>
         </Text>
       </View>
 
-      {/* Exibição de treinos recentes */}
-      <View style={styles.recentWorkoutsContainer}>
-        <Text style={styles.recentWorkoutsTitle}>Últimos Treinos</Text>
-        {recentWorkouts.length > 0 ? (
-          <ScrollView style={styles.recentWorkoutsList}>
-            {recentWorkouts.map((workout, index) => (
-              <View key={index} style={styles.workoutItem}>
-                <Text style={styles.workoutText}>
-                  {workout.name} - {workout.calories} Calorias
+      {/* Exibição de Refeições Diárias */}
+      <View style={styles.mealsContainer}>
+        <Text style={styles.mealsTitle}>Refeições Diárias</Text>
+        {meals.length > 0 ? (
+          <ScrollView style={styles.mealsList}>
+            {meals.map((meal, index) => (
+              <View key={index} style={styles.mealItem}>
+                <Text style={styles.mealText}>
+                  {meal.name} - {meal.calories} Calorias
                 </Text>
               </View>
             ))}
           </ScrollView>
         ) : (
-          <Text style={styles.noWorkouts}>Nenhum treino recente.</Text>
+          <Text style={styles.noMeals}>Nenhuma refeição registrada.</Text>
         )}
       </View>
 
@@ -88,8 +99,13 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Workout')}>
           <Text style={styles.buttonText}>Ver Treinos</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Progress')}>
-          <Text style={styles.buttonText}>Ver Progresso</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Meal')}>
+          <Text style={styles.buttonText}>Ver Refeição</Text>
+        </TouchableOpacity>
+
+        {/* Botão para Cardio */}
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Cardio')}>
+          <Text style={styles.buttonText}>Monitorar Cardio</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.buttonText}>Meu Perfil</Text>
@@ -149,6 +165,39 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ff5722',
   },
+  mealsContainer: {
+    marginBottom: 20,
+  },
+  mealsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#ff5722',
+    textAlign: 'center',
+  },
+  mealsList: {
+    maxHeight: 150,
+  },
+  mealItem: {
+    padding: 10,
+    backgroundColor: '#fff',
+    marginVertical: 5,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  mealText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  noMeals: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+  },
   buttonContainer: {
     flexDirection: 'column',
     alignItems: 'center',
@@ -165,39 +214,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  recentWorkoutsContainer: {
-    marginBottom: 20,
-  },
-  recentWorkoutsTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#ff5722',
-    textAlign: 'center',
-  },
-  recentWorkoutsList: {
-    maxHeight: 150,
-  },
-  workoutItem: {
-    padding: 10,
-    backgroundColor: '#fff',
-    marginVertical: 5,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
-  },
-  workoutText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  noWorkouts: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 16,
   },
 });
 
