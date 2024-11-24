@@ -27,7 +27,7 @@ const HomeScreen = ({ navigation }) => {
       // Carregar as refeições armazenadas ou adicionar refeições predefinidas
       const storedMeals = await AsyncStorage.getItem('dietData');
       const mealsList = storedMeals ? JSON.parse(storedMeals) : [
-        { name: 'Almoço', calories: 600 }, 
+        { name: 'Almoço', calories: 600 },
         { name: 'Jantar', calories: 500 },
         { name: 'Café da manhã', calories: 300 }
       ];
@@ -71,9 +71,6 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.metrics}>Seus Passos:</Text>
         <Text style={styles.metricItem}>
           Total de Treinos: <Text style={styles.metricValue}>{totalWorkouts}</Text>
-        </Text>
-        <Text style={styles.metricItem}>
-          Refeição Diária: <Text style={styles.metricValue}>500 Calorias Queimadas</Text>
         </Text>
       </View>
 

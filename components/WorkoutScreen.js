@@ -1,8 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// URL da API para gerenciar treinos
+const API_URL = 'https://673d55b50118dbfe8606e723.mockapi.io/api/fittrack/workouts';
 
 const WorkoutScreen = ({ navigation }) => {
   const [workouts, setWorkouts] = useState([]);
@@ -12,78 +16,77 @@ const WorkoutScreen = ({ navigation }) => {
   const [newWorkoutDay, setNewWorkoutDay] = useState('Segunda-feira');
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [expandedWorkout, setExpandedWorkout] = useState(null); // Estado para controlar qual treino está expandido
 
+  // Carregar treinos da API
   const loadWorkouts = async () => {
     try {
-      const storedWorkouts = await AsyncStorage.getItem('workouts');
-      if (storedWorkouts) {
-        setWorkouts(JSON.parse(storedWorkouts));
-      }
+      const response = await axios.get(API_URL);
+      setWorkouts(response.data);
+      await AsyncStorage.setItem('workoutTotal', response.data.length.toString()); // Atualiza o total de treinos
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao carregar treinos');
+      Alert.alert('Erro', 'Erro ao carregar treinos da API');
     }
   };
 
+  // Adicionar ou editar treino
   const saveWorkout = async () => {
     if (newWorkoutName.trim()) {
-      let updatedWorkouts;
-      if (isEditing) {
-        updatedWorkouts = workouts.map((workout) =>
-          workout.id === selectedWorkout.id
-            ? { ...selectedWorkout, name: newWorkoutName, description: newWorkoutDescription, day: newWorkoutDay }
-            : workout
-        );
-      } else {
-        const newWorkout = {
-          id: Date.now(),
-          name: newWorkoutName,
-          description: newWorkoutDescription,
-          day: newWorkoutDay,
-          completed: false,
-        };
-        updatedWorkouts = [...workouts, newWorkout];
-        
-        // Atualizar o total de treinos no AsyncStorage
-        const totalWorkouts = await AsyncStorage.getItem('workoutTotal');
-        const newTotalWorkouts = totalWorkouts ? parseInt(totalWorkouts, 10) + 1 : 1;
-        await AsyncStorage.setItem('workoutTotal', newTotalWorkouts.toString());
-      }
+      const workoutData = {
+        name: newWorkoutName,
+        description: newWorkoutDescription,
+        day: newWorkoutDay,
+        completed: false,
+      };
 
       try {
-        await AsyncStorage.setItem('workouts', JSON.stringify(updatedWorkouts));
-        setWorkouts(updatedWorkouts);
+        if (isEditing) {
+          await axios.put(`${API_URL}/${selectedWorkout.id}`, workoutData);
+          setWorkouts((prev) =>
+            prev.map((workout) =>
+              workout.id === selectedWorkout.id ? { ...workout, ...workoutData } : workout
+            )
+          );
+        } else {
+          const response = await axios.post(API_URL, workoutData);
+          setWorkouts((prev) => [...prev, response.data]);
+        }
+
+        // Atualiza o total de treinos
+        await AsyncStorage.setItem('workoutTotal', (workouts.length + 1).toString());
+
         setNewWorkoutName('');
         setNewWorkoutDescription('');
         setNewWorkoutDay('Segunda-feira');
         setModalVisible(false);
         setIsEditing(false);
       } catch (error) {
-        Alert.alert('Erro', 'Erro ao salvar treino');
+        Alert.alert('Erro', 'Erro ao salvar treino na API');
       }
     } else {
       Alert.alert('Validação', 'O nome do treino não pode estar vazio.');
     }
   };
 
-  const editWorkout = (workout) => {
-    setSelectedWorkout(workout);
-    setNewWorkoutName(workout.name);
-    setNewWorkoutDescription(workout.description);
-    setNewWorkoutDay(workout.day);
-    setIsEditing(true);
-    setModalVisible(true);
-  };
-
+  // Marcar treino como concluído/incompleto
   const toggleCompleted = async (workout) => {
-    const updatedWorkouts = workouts.map((w) =>
-      w.id === workout.id ? { ...w, completed: !w.completed } : w
-    );
-
     try {
-      await AsyncStorage.setItem('workouts', JSON.stringify(updatedWorkouts));
-      setWorkouts(updatedWorkouts);
+      const updatedWorkout = { ...workout, completed: !workout.completed };
+      await axios.put(`${API_URL}/${workout.id}`, updatedWorkout);
+      setWorkouts((prev) =>
+        prev.map((w) => (w.id === workout.id ? updatedWorkout : w))
+      );
     } catch (error) {
       Alert.alert('Erro', 'Erro ao atualizar treino');
+    }
+  };
+
+  // Função para expandir ou retrair a descrição do treino
+  const toggleExpand = (workoutId) => {
+    if (expandedWorkout === workoutId) {
+      setExpandedWorkout(null); // Se o treino já estiver expandido, recolhe
+    } else {
+      setExpandedWorkout(workoutId); // Expande o treino
     }
   };
 
@@ -102,11 +105,35 @@ const WorkoutScreen = ({ navigation }) => {
           <View style={styles.workoutItem}>
             <View style={styles.workoutHeader}>
               <Text style={item.completed ? styles.completedWorkout : styles.workoutName}>{item.name}</Text>
-              <TouchableOpacity onPress={() => editWorkout(item)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedWorkout(item);
+                  setNewWorkoutName(item.name);
+                  setNewWorkoutDescription(item.description);
+                  setNewWorkoutDay(item.day);
+                  setIsEditing(true);
+                  setModalVisible(true);
+                }}
+              >
                 <Icon name="edit" size={24} color="#ff5722" />
               </TouchableOpacity>
             </View>
             <Text style={styles.workoutDay}>Dia: {item.day}</Text>
+
+            {/* Setinha para expandir a descrição */}
+            <TouchableOpacity onPress={() => toggleExpand(item.id)}>
+              <Icon
+                name={expandedWorkout === item.id ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                size={24}
+                color="#ff5722"
+              />
+            </TouchableOpacity>
+
+            {/* Mostrar descrição quando o treino for expandido */}
+            {expandedWorkout === item.id && (
+              <Text style={styles.workoutDescription}>{item.description}</Text>
+            )}
+
             <TouchableOpacity onPress={() => toggleCompleted(item)}>
               <Text style={styles.toggleCompletion}>
                 {item.completed ? 'Marcar como Incompleto' : 'Marcar como Completo'}
@@ -162,6 +189,7 @@ const WorkoutScreen = ({ navigation }) => {
   );
 };
 
+// Estilização
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -249,6 +277,11 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     color: 'gray',
+  },
+  workoutDescription: {
+    marginTop: 8,
+    color: 'gray',
+    fontStyle: 'italic',
   },
 });
 

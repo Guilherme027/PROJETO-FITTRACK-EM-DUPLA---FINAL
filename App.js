@@ -28,7 +28,7 @@ const App = () => {
         <Stack.Screen 
           name="Home" 
           component={HomeScreen} 
-          options={{ title: 'Página Inicial' }} 
+          options={{headerShown: false}} 
         />
         
         {/* Tela de refeição (substituindo Progresso) */}

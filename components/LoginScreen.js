@@ -1,71 +1,69 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, Image, TextInput, TouchableOpacity, Button, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Button,
+  StyleSheet,
+  Alert,
+  Image,
+} from 'react-native';
+import axios from 'axios';
+
+const API_URL = 'https://673d55b50118dbfe8606e723.mockapi.io/api/fittrack/users';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSignup, setIsSignup] = useState(false);
-  const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
 
   const handleAuth = async () => {
     if (isSignup) {
-      if (username === '') {
-        setMessage('O nome de usuário não pode estar vazio.');
+      // Cadastro de usuário
+      if (password !== confirmPassword) {
+        Alert.alert('Erro', 'As senhas não coincidem!');
         return;
       }
-      if (password === '') {
-        setMessage('A senha não pode estar vazia.');
-        return;
-      }
-      if (password === confirmPassword) {
-        try {
-          await AsyncStorage.setItem('user', JSON.stringify({ username, password }));
-          setMessage('Cadastro realizado com sucesso!');
-          setIsSignup(false);
-        } catch (error) {
-          setMessage('Erro ao tentar cadastrar.');
-        }
-      } else {
-        setMessage('As senhas não coincidem.');
+
+      try {
+        await axios.post(API_URL, {
+          userName: username,
+          password,
+        });
+        Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+        setIsSignup(false); // Volta para a tela de login
+      } catch (error) {
+        Alert.alert('Erro', 'Erro ao cadastrar usuário.');
       }
     } else {
-      if (username === '' || password === '') {
-        setMessage('O nome de usuário e a senha não podem estar vazios.');
-        return;
-      }
+      // Login de usuário
       try {
-        const storedUser = await AsyncStorage.getItem('user');
-        const parsedUser = JSON.parse(storedUser);
+        const response = await axios.get(API_URL);
+        const users = response.data;
 
-        if (parsedUser?.username === username && parsedUser?.password === password) {
-          setMessage('Login realizado com sucesso');
-          await AsyncStorage.setItem('loggedIn', 'true');
-          navigation.navigate('Home');
+        const user = users.find(
+          (u) => u.userName === username && u.password === password
+        );
+
+        if (user) {
+          Alert.alert('Sucesso', 'Login realizado com sucesso!');
+          navigation.navigate('Home', { userId: user.id }); // Agora redireciona para a tela Home
         } else {
-          setMessage('Login inválido, tente novamente');
+          Alert.alert('Erro', 'Usuário ou senha inválidos.');
         }
       } catch (error) {
-        setMessage('Erro ao tentar logar');
+        Alert.alert('Erro', 'Erro ao realizar login.');
       }
     }
+
     setUsername('');
     setPassword('');
     setConfirmPassword('');
   };
-
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      const isLoggedIn = await AsyncStorage.getItem('loggedIn');
-      if (isLoggedIn === 'true') {
-        navigation.navigate('Home');
-      }
-    };
-    checkLoginStatus();
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -106,20 +104,27 @@ const LoginScreen = ({ navigation }) => {
             style={[styles.input, styles.passwordInput]}
             placeholderTextColor="#a9a9a9"
           />
-          <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+          <TouchableOpacity
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
             <Text style={styles.toggleText}>
               {showConfirmPassword ? 'Ocultar' : 'Mostrar'}
             </Text>
           </TouchableOpacity>
         </View>
       )}
-      <Button title={isSignup ? 'Cadastrar' : 'Logar'} onPress={handleAuth} color="#ff5722" />
-      <TouchableOpacity onPress={() => setIsSignup(!isSignup)} style={styles.signupButton}>
+      <Button
+        title={isSignup ? 'Cadastrar' : 'Logar'}
+        onPress={handleAuth}
+        color="#ff5722"
+      />
+      <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
         <Text style={styles.signupText}>
-          {isSignup ? 'Já tem uma conta? Faça Login' : 'Não tem uma conta? Cadastre-se'}
+          {isSignup
+            ? 'Já tem uma conta? Faça Login'
+            : 'Não tem uma conta? Cadastre-se'}
         </Text>
       </TouchableOpacity>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 };
@@ -158,16 +163,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 16,
   },
-  signupButton: {
-    marginTop: 8,
-    alignItems: 'center',
-  },
   signupText: {
     color: '#ff5722',
-  },
-  message: {
-    marginTop: 16,
-    color: '#ff5722',
+    marginTop: 8,
     textAlign: 'center',
   },
 });
