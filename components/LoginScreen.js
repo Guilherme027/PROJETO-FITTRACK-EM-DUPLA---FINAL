@@ -24,6 +24,10 @@ const LoginScreen = ({ navigation }) => {
   const handleAuth = async () => {
     if (isSignup) {
       // Cadastro de usuário
+      if (!username.trim() || !password.trim() || !confirmPassword.trim()) {
+        Alert.alert('Erro', 'Todos os campos são obrigatórios!');
+        return;
+      }
       if (password !== confirmPassword) {
         Alert.alert('Erro', 'As senhas não coincidem!');
         return;
@@ -31,27 +35,35 @@ const LoginScreen = ({ navigation }) => {
 
       try {
         await axios.post(API_URL, {
-          userName: username,
+          userName: username.trim(),
           password,
         });
         Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
         setIsSignup(false); // Volta para a tela de login
+        resetFields();
       } catch (error) {
         Alert.alert('Erro', 'Erro ao cadastrar usuário.');
       }
     } else {
       // Login de usuário
       try {
+        if (!username.trim() || !password.trim()) {
+          Alert.alert('Erro', 'Usuário e senha são obrigatórios!');
+          return;
+        }
+
         const response = await axios.get(API_URL);
         const users = response.data;
 
         const user = users.find(
-          (u) => u.userName === username && u.password === password
+          (u) => u.userName === username.trim() && u.password === password
         );
 
         if (user) {
           Alert.alert('Sucesso', 'Login realizado com sucesso!');
-          navigation.navigate('Home', { userId: user.id }); // Agora redireciona para a tela Home
+          // Passando o id do usuário ao navegar para a Home
+          navigation.navigate('Home', { userId: user.id });
+          resetFields();
         } else {
           Alert.alert('Erro', 'Usuário ou senha inválidos.');
         }
@@ -59,7 +71,9 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert('Erro', 'Erro ao realizar login.');
       }
     }
+  };
 
+  const resetFields = () => {
     setUsername('');
     setPassword('');
     setConfirmPassword('');
@@ -118,7 +132,12 @@ const LoginScreen = ({ navigation }) => {
         onPress={handleAuth}
         color="#ff5722"
       />
-      <TouchableOpacity onPress={() => setIsSignup(!isSignup)}>
+      <TouchableOpacity
+        onPress={() => {
+          setIsSignup(!isSignup);
+          resetFields(); // Limpa os campos ao alternar
+        }}
+      >
         <Text style={styles.signupText}>
           {isSignup
             ? 'Já tem uma conta? Faça Login'

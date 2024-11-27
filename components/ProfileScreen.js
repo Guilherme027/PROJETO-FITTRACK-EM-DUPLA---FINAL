@@ -4,14 +4,15 @@ import axios from 'axios';
 
 const API_URL = 'https://673d55b50118dbfe8606e723.mockapi.io/api/fittrack/users';
 
-const ProfileScreen = ({ route }) => {
-  const { id } = route.params || {}; // Obtendo o parâmetro id corretamente
+const ProfileScreen = ({ route, navigation }) => {
+  const { id } = route.params || {};
 
-  // Verifique se o id existe
-  if (!id) {
-    Alert.alert('Erro', 'ID do usuário não encontrado.');
-    return null; // Ou redirecionar para a tela de login
-  }
+  useEffect(() => {
+    if (!id) {
+      Alert.alert('Erro', 'ID do usuário não encontrado.');
+      navigation.navigate('Login');
+    }
+  }, [id]);
 
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,15 +38,20 @@ const ProfileScreen = ({ route }) => {
     if (id) {
       fetchUserData();
     }
-  }, [id]); // Corrigido de 'idd' para 'id'
+  }, [id]);
 
   const saveProfile = async () => {
+    if (!userName.trim() || !email.trim() || !height.trim() || !weight.trim()) {
+      Alert.alert('Erro', 'Todos os campos são obrigatórios!');
+      return;
+    }
+
     try {
       await axios.put(`${API_URL}/${id}`, {
-        userName,
-        email,
-        height,
-        weight,
+        userName: userName.trim(),
+        email: email.trim(),
+        height: height.trim(),
+        weight: weight.trim(),
       });
       Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
       setIsEditing(false);
@@ -53,6 +59,8 @@ const ProfileScreen = ({ route }) => {
       Alert.alert('Erro', 'Não foi possível salvar os dados do usuário.');
     }
   };
+
+  if (!id) return null;
 
   return (
     <View style={styles.container}>
@@ -109,21 +117,21 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
-    padding: 10,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 5,
-    backgroundColor: '#fff',
   },
   button: {
     backgroundColor: '#ff5722',
     padding: 12,
+    borderRadius: 4,
     alignItems: 'center',
-    borderRadius: 5,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

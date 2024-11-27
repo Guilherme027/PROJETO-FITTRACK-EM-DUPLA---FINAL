@@ -7,7 +7,7 @@ const HomeScreen = ({ navigation }) => {
   const [userName, setUserName] = useState('');
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [recentWorkouts, setRecentWorkouts] = useState([]);
-  const [meals, setMeals] = useState([]); // Armazenar as refeições
+  const [meals, setMeals] = useState([]);
 
   // Função para carregar os dados do usuário, treinos e refeições
   const loadUserData = async () => {
@@ -18,18 +18,19 @@ const HomeScreen = ({ navigation }) => {
       const recent = await AsyncStorage.getItem('recentWorkouts');
       const workoutsList = recent ? JSON.parse(recent) : [];
 
+      // Atualiza os estados com os dados carregados
       if (name) {
         setUserName(name);
       }
       setTotalWorkouts(workouts);
       setRecentWorkouts(workoutsList);
 
-      // Carregar as refeições armazenadas ou adicionar refeições predefinidas
+      // Carregar refeições
       const storedMeals = await AsyncStorage.getItem('dietData');
       const mealsList = storedMeals ? JSON.parse(storedMeals) : [
         { name: 'Almoço', calories: 600 },
         { name: 'Jantar', calories: 500 },
-        { name: 'Café da manhã', calories: 300 }
+        { name: 'Café da manhã', calories: 300 },
       ];
       setMeals(mealsList);
     } catch (error) {
@@ -37,11 +38,13 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // Hook para carregar dados quando a tela for focada
   useEffect(() => {
     const focusListener = navigation.addListener('focus', loadUserData);
     return focusListener;
   }, [navigation]);
 
+  // Função de logout
   const handleLogout = async () => {
     Alert.alert('Sair', 'Você tem certeza que deseja sair?', [
       { text: 'Cancelar', style: 'cancel' },
